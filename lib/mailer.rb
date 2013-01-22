@@ -2,7 +2,6 @@
 
 require 'socket'
 require 'rubygems'
-#require 'sequel'
 require 'thread'
 require 'timeout'
 
@@ -18,28 +17,28 @@ module SMTP
       unless response.match(/^250 (.+?)/)
         message.finish(response)
       else
-        #	print response
+        #  print response
 
         socket.print("MAIL FROM:<"+message.from+">\r\n")
         response = get_response(socket)
         unless response.match(/^250 (.+?)/)
           message.finish(response)
         else
-          #		print response
+          #    print response
 
           socket.print("RCPT TO:<"+message.to+">\r\n")
           response = get_response(socket)
           unless response.match(/^250 (.+?)/)
             message.finish(response)
           else
-            #			print response
+            #      print response
 
             socket.print("DATA\r\n")
             response = get_response(socket)
             unless response.match(/^354 (.+?)/)
               message.finish(response)
             else
-              #				print response
+              #        print response
 
               socket.print(message.message+"\r\n.\r\n")
               response = get_response(socket)
@@ -87,107 +86,107 @@ module SMTP
 end
 
 class Message
-	def initialize(ip, mx_group_id)
-		# Get message from DB here using ip and mx_group_id below....
-		@ip = ip
-		@mx_group_id = mx_group_id
-	
-		@from_name="Matt"
-		@from_email="mduffield@sig2noise.net"
-		@to_name="Matt Duffield"
-		#@to_email="tester@blackhole1.sytes.net"
+  def initialize(ip, mx_group_id)
+    # Get message from DB here using ip and mx_group_id below....
+    @ip = ip
+    @mx_group_id = mx_group_id
+
+    @from_name="Matt"
+    @from_email="mduffield@sig2noise.net"
+    @to_name="Matt Duffield"
+    #@to_email="tester@blackhole1.sytes.net"
     @to_email="tester@xxx.nonextist.safd"
-#		@to_email="mduffield@gmail.com"
-		@subject="Hello Sir"
-		@message="Please do not reply to this.\r\nIt won't work anyway."
-	end
+#    @to_email="mduffield@gmail.com"
+    @subject="Hello Sir"
+    @message="Please do not reply to this.\r\nIt won't work anyway."
+  end
 
-	def from
-		@from_email
-	end
+  def from
+    @from_email
+  end
 
-	def from_domain
-		user,from_domain = @from_email.split("@");
-		from_domain
-	end
+  def from_domain
+    user,from_domain = @from_email.split("@");
+    from_domain
+  end
 
-	def to
-		@to_email
-	end
+  def to
+    @to_email
+  end
 
-	def to_domain
-		user,to_domain = @to_email.split("@");
-		to_domain
-	end
+  def to_domain
+    user,to_domain = @to_email.split("@");
+    to_domain
+  end
 
-	def message
-		mess = "From: \""+@from_name+"\" <"+@from_email+">\r\n"
-		mess += "To: \""+@to_name+"\" <"+@to_email+">\r\n"
-		mess += "Subject: "+@subject+"\r\n"
-		mess += @message
-		mess
+  def message
+    mess = "From: \""+@from_name+"\" <"+@from_email+">\r\n"
+    mess += "To: \""+@to_name+"\" <"+@to_email+">\r\n"
+    mess += "Subject: "+@subject+"\r\n"
+    mess += @message
+    mess
   end
 
 
-	def finish(response)
-		# Insert response info into db here...
-		print "Message finished..."+response+"\n"
-	end
+  def finish(response)
+    # Insert response info into db here...
+    print "Message finished..."+response+"\n"
+  end
 end
 
 class Mailer
 
-	def initialize(ip, mx_group_id, speed)
-		@ip = ip
-		@mx_group_id = mx_group_id
-		@speed = speed 
-		@mThread = nil
-	end
+  def initialize(ip, mx_group_id, speed)
+    @ip = ip
+    @mx_group_id = mx_group_id
+    @speed = speed
+    @mThread = nil
+  end
 
-	def control_speed
-		time_per_email = 1.0/@speed
-		time_taken = Time.now - @start_time
-		time_to_sleep = time_per_email - time_taken
-		puts time_to_sleep
-		sleep time_to_sleep unless time_to_sleep < 0			
-	end
+  def control_speed
+    time_per_email = 1.0/@speed
+    time_taken = Time.now - @start_time
+    time_to_sleep = time_per_email - time_taken
+    puts time_to_sleep
+    sleep time_to_sleep unless time_to_sleep < 0
+  end
 
-	def run
-		until false
-			@start_time = Time.now
-			@speed = $mailer_config.get_speed(@ip,@mx_group_id)
-			puts @speed
-			message = Message.new(@ip,@mx_group_id)
-			host = SMTP.get_MX_server(message.to_domain)
-			port = 25
+  def run
+    until false
+      @start_time = Time.now
+      @speed = $mailer_config.get_speed(@ip,@mx_group_id)
+      puts @speed
+      message = Message.new(@ip,@mx_group_id)
+      host = SMTP.get_MX_server(message.to_domain)
+      port = 25
 
-			begin
-			  @socket = TCPSocket.new(host, port, @ip)
+      begin
+        @socket = TCPSocket.new(host, port, @ip)
       rescue SocketError => ex
-				message.finish("Unable to connect: #{ex.message}")
+        message.finish("Unable to connect: #{ex.message}")
       else
         puts retval.inspect
         puts "sending mail"
         SMTP.send_mail(message, @socket)
-			end
-			@socket.close
-			print "\n-------#{@speed}-------\n"
-			control_speed
-		end	
-	end
+      end
+      @socket.close
+      print "\n-------#{@speed}-------\n"
+      control_speed
+    end
+  end
 end
 
 class MailerConfig
-	def initialize
-		@mConfig = {} 
-	end
-	def add(ip, mx_group_id, speed)
-		@mConfig[ip] = {} if @mConfig[ip].nil?
-		@mConfig[ip][mx_group_id] = speed
-	end
-	def get_speed(ip, mx_group_id)
-		@mConfig[ip][mx_group_id]
-	end
+  def initialize
+    @mConfig = {}
+  end
+  def add(ip, mx_group_id, speed)
+    @mConfig[ip] = {} if @mConfig[ip].nil?
+    @mConfig[ip][mx_group_id] = speed
+  end
+  def get_speed(ip, mx_group_id)
+    @mConfig[ip][mx_group_id]
+  end
 end
 
 #OPEN DB CONNECTION HERE TO SHARE?
@@ -209,8 +208,8 @@ $mailer_config.add(ip, mx_group_id, speed)
 mailerThreads[ip] = {} if mailerThreads[ip].nil?
 100.times do #simulate 100 threads on different dg's 
 mailerThreads[ip][mx_group_id] = Thread.new do 
-	mail = Mailer.new(ip, mx_group_id, speed)
-	mail.run
+  mail = Mailer.new(ip, mx_group_id, speed)
+  mail.run
 end
 mx_group_id+=1
 $mailer_config.add(ip, mx_group_id, mx_group_id)
@@ -225,10 +224,10 @@ end
 
 #main program loop
 until false
-	#loop just for testing crap
-	(1..100).step(1) do |x|
-#		speed+=0.1
-		$mailer_config.add(ip, x, 0.1)
-	end
-	sleep 0.01
+  #loop just for testing crap
+  (1..100).step(1) do |x|
+#    speed+=0.1
+    $mailer_config.add(ip, x, 0.1)
+  end
+  sleep 0.01
 end
